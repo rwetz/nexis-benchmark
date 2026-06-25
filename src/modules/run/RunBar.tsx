@@ -24,7 +24,13 @@ export function RunBar() {
       </div>
 
       {running ? (
-        <Button variant="destructive" size="lg" onClick={() => void cancelRun()} className="w-full">
+        <Button
+          variant="destructive"
+          size="lg"
+          onClick={() => void cancelRun()}
+          className="w-full"
+          title="Esc"
+        >
           <HugeiconsIcon icon={StopIcon} size={16} strokeWidth={2} />
           Stop
         </Button>
@@ -35,6 +41,7 @@ export function RunBar() {
           onClick={() => void startRun()}
           disabled={cells.length === 0}
           className="w-full"
+          title="⌘/Ctrl + Enter"
         >
           <HugeiconsIcon
             icon={cells.length === 0 ? Loading03Icon : PlayIcon}

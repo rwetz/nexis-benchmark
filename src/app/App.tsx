@@ -9,6 +9,7 @@ import { ConfigPanel } from "@/modules/config/ConfigPanel";
 import { RunBar } from "@/modules/run/RunBar";
 import { ResultsDashboard } from "@/modules/results/ResultsDashboard";
 import { ThemeProvider } from "@/modules/theme/ThemeProvider";
+import { useShortcuts } from "@/modules/window/useShortcuts";
 import { useBenchStore } from "@/store/useBenchStore";
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
 
 function Shell() {
   const init = useBenchStore((s) => s.init);
+  useShortcuts();
   useEffect(() => {
     void init();
   }, [init]);

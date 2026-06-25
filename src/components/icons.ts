@@ -5,6 +5,7 @@
 export {
   Alert02Icon,
   Cancel01Icon,
+  Clock01Icon,
   Copy01Icon,
   Database02Icon,
   Delete02Icon,

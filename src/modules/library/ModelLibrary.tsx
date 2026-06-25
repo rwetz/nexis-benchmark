@@ -19,6 +19,8 @@ const FORMAT_STYLES: Record<string, string> = {
   onnx: "bg-onnx/15 text-onnx",
 };
 
+const formatCtx = (n: number) => (n >= 1024 ? `${Math.round(n / 1024)}K` : `${n}`);
+
 export function ModelLibrary() {
   const models = useBenchStore((s) => s.models);
   const selected = useBenchStore((s) => s.selectedModelIds);
@@ -130,7 +132,7 @@ function ModelRow({
         />
         <div className="min-w-0 flex-1">
           <div className="truncate text-[13px] font-medium leading-tight">{model.name}</div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10.5px] text-muted-foreground">
             <span
               className={cn(
                 "rounded px-1 py-px font-semibold uppercase",
@@ -139,8 +141,9 @@ function ModelRow({
             >
               {model.format}
             </span>
-            <span>{TASK_LABELS[model.task]}</span>
+            <span>{model.arch ?? TASK_LABELS[model.task]}</span>
             {model.paramsLabel && <span>· {model.paramsLabel}</span>}
+            {model.contextLength ? <span>· {formatCtx(model.contextLength)} ctx</span> : null}
             <span>· {formatBytes(model.sizeBytes)}</span>
           </div>
         </div>

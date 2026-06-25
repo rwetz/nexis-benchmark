@@ -246,6 +246,8 @@ mod tests {
             task: TaskType::Classification,
             params_label: None,
             quant: None,
+            arch: None,
+            context_length: None,
             added_at: String::new(),
         };
         let config = BenchConfig {

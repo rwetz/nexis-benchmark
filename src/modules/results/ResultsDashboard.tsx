@@ -2,13 +2,17 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/BrandMark";
 import { BACKEND_COLOR, BACKEND_SHORT } from "@/lib/backendMeta";
-import { Download04Icon, HugeiconsIcon } from "@/components/icons";
-import { exportRunCsv } from "@/lib/api";
+import { toast } from "sonner";
+import { Copy01Icon, DocumentCodeIcon, Download04Icon, HugeiconsIcon } from "@/components/icons";
+import { copyRunMarkdown, exportRunCsv, exportRunJson } from "@/lib/api";
+import { HistoryMenu } from "./HistoryMenu";
 import { cn } from "@/lib/utils";
 import { type BackendId, type BenchResult } from "@/lib/types";
 import { useBenchStore } from "@/store/useBenchStore";
 import { ComparisonChart } from "./ComparisonChart";
 import { RunMatrix } from "./RunMatrix";
+import { SummaryStrip } from "./viz/SummaryStrip";
+import { TradeoffScatter } from "./viz/TradeoffScatter";
 import { METRICS, metricByKey, type MetricKey } from "./metrics";
 
 export function ResultsDashboard() {
@@ -54,25 +58,53 @@ export function ResultsDashboard() {
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-3">
-          <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+        <div className="ml-auto flex items-center gap-2">
+          <span className="mr-1 font-mono text-[11px] text-muted-foreground tabular-nums">
             {completed}/{total} {running ? "running…" : "done"}
           </span>
+          <HistoryMenu />
           <Button
             variant="outline"
             size="sm"
-            onClick={() => exportRunCsv(run, models)}
             disabled={completed === 0}
             className="rounded-md"
+            onClick={async () => {
+              const ok = await copyRunMarkdown(run, models);
+              if (ok) toast.success("Copied results as Markdown");
+              else toast.error("Clipboard unavailable");
+            }}
+          >
+            <HugeiconsIcon icon={Copy01Icon} size={15} strokeWidth={1.8} />
+            Copy
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={completed === 0}
+            className="rounded-md"
+            onClick={() => exportRunCsv(run, models)}
           >
             <HugeiconsIcon icon={Download04Icon} size={15} strokeWidth={1.8} />
-            Export CSV
+            CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={completed === 0}
+            className="rounded-md"
+            onClick={() => exportRunJson(run, models)}
+          >
+            <HugeiconsIcon icon={DocumentCodeIcon} size={15} strokeWidth={1.8} />
+            JSON
           </Button>
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto nexis-scrollbar">
         <div className="@container mx-auto flex w-full max-w-[1700px] flex-col gap-6 px-5 py-5 lg:px-8 2xl:px-10">
+          {/* Leaders */}
+          <SummaryStrip results={run.results} models={models} />
+
           {/* Comparison */}
           <section className="rounded-2xl border border-border bg-card p-5 lg:p-6">
             <div className="mb-4 flex items-center justify-between">
@@ -92,6 +124,18 @@ export function ResultsDashboard() {
               results={run.results}
             />
             <MetricsProvenance results={run.results} />
+          </section>
+
+          {/* Efficiency map */}
+          <section className="rounded-2xl border border-border bg-card p-5 lg:p-6">
+            <div className="mb-3">
+              <h2 className="text-sm font-semibold">Efficiency map</h2>
+              <p className="text-[11px] text-muted-foreground">
+                Throughput vs latency (log–log) · the dashed line is the Pareto frontier — points
+                where nothing else is both faster and higher-throughput. Top-left is ideal.
+              </p>
+            </div>
+            <TradeoffScatter results={run.results} models={models} />
           </section>
 
           {/* Per-cell detail */}

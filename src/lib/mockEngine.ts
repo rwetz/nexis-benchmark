@@ -154,6 +154,8 @@ export const DEMO_MODELS: ModelInfo[] = [
     task: "generation",
     paramsLabel: "8B",
     quant: "Q4_K_M",
+    arch: "llama",
+    contextLength: 8192,
     addedAt: new Date(Date.now() - 86400e3).toISOString(),
   },
   {
@@ -165,6 +167,8 @@ export const DEMO_MODELS: ModelInfo[] = [
     task: "generation",
     paramsLabel: "3.8B",
     quant: "Q5_K_M",
+    arch: "phi3",
+    contextLength: 4096,
     addedAt: new Date(Date.now() - 3600e3).toISOString(),
   },
   {

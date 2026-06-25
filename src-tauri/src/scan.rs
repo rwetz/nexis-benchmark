@@ -46,12 +46,30 @@ fn derive(path: &str) -> Option<ModelInfo> {
 
     let size_bytes = fs::metadata(p).map(|m| m.len()).unwrap_or(0);
     let task = infer_task(&lower, format);
-    let quant = if format == ModelFormat::Gguf {
+    let mut quant = if format == ModelFormat::Gguf {
         find_quant(&name)
     } else {
         None
     };
-    let params_label = find_params(&name);
+    let mut params_label = find_params(&name);
+    let mut arch = None;
+    let mut context_length = None;
+
+    // Prefer real header metadata over filename heuristics for GGUF.
+    if format == ModelFormat::Gguf {
+        if let Some(meta) = crate::gguf::read_metadata(p) {
+            arch = meta.arch;
+            context_length = meta.context_length;
+            if let Some(pc) = meta.param_count {
+                params_label = Some(crate::gguf::fmt_params(pc));
+            }
+            if let Some(ft) = meta.file_type {
+                if let Some(q) = crate::gguf::file_type_quant(ft) {
+                    quant = Some(q.to_string());
+                }
+            }
+        }
+    }
 
     Some(ModelInfo {
         id: format!("m-{:x}", fnv1a(path)),
@@ -62,6 +80,8 @@ fn derive(path: &str) -> Option<ModelInfo> {
         task,
         params_label,
         quant,
+        arch,
+        context_length,
         added_at: Utc::now().to_rfc3339(),
     })
 }

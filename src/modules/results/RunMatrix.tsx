@@ -9,6 +9,8 @@ import {
   type ModelInfo,
 } from "@/lib/types";
 import { useBenchStore } from "@/store/useBenchStore";
+import { NOISY_CV, sampleStats } from "@/lib/stats";
+import { DistributionStrip } from "./viz/DistributionStrip";
 
 export function RunMatrix() {
   const run = useBenchStore((s) => s.run);
@@ -88,45 +90,78 @@ function Cell({
       <div className="truncate text-[12px] font-medium leading-tight">{model?.name ?? "—"}</div>
 
       {done ? (
-        <div className="mt-0.5 grid grid-cols-3 gap-2">
-          <Stat label="tok/s" value={formatCompact(result!.metrics!.tokensPerSec)} />
-          <Stat label="TTFT" value={formatMs(result!.metrics!.firstTokenMs)} />
-          <Stat label="mem" value={formatBytes(result!.metrics!.peakMemBytes, 0)} />
-          <Stat label="p50" value={formatMs(result!.metrics!.latencyP50Ms)} />
-          <Stat label="p95" value={formatMs(result!.metrics!.latencyP95Ms)} />
-          <Stat
-            label="acc"
-            value={
-              result!.metrics!.accuracy != null
-                ? `${(result!.metrics!.accuracy * 100).toFixed(1)}%`
-                : "—"
-            }
-          />
-        </div>
+        <>
+          <div className="mt-0.5 grid grid-cols-3 gap-2">
+            <Stat label="tok/s" value={formatCompact(result!.metrics!.tokensPerSec)} />
+            <Stat label="TTFT" value={formatMs(result!.metrics!.firstTokenMs)} />
+            <Stat label="mem" value={formatBytes(result!.metrics!.peakMemBytes, 0)} />
+            <Stat label="p50" value={formatMs(result!.metrics!.latencyP50Ms)} />
+            <Stat label="p95" value={formatMs(result!.metrics!.latencyP95Ms)} />
+            <Stat
+              label="acc"
+              value={
+                result!.metrics!.accuracy != null
+                  ? `${(result!.metrics!.accuracy * 100).toFixed(1)}%`
+                  : "—"
+              }
+            />
+          </div>
+          {(() => {
+            const samples = result!.metrics!.samplesMs;
+            if (samples.length <= 1) return null;
+            const st = sampleStats(samples);
+            const noisy = st.cv > NOISY_CV;
+            return (
+              <div className="mt-1 flex flex-col gap-1">
+                <div className="flex items-center justify-between text-[9px] uppercase tracking-wide text-muted-foreground/60">
+                  <span>latency spread · {samples.length} runs</span>
+                  <span
+                    className={cn(
+                      "font-mono normal-case tracking-normal",
+                      noisy ? "text-amber-500" : "text-muted-foreground/60",
+                    )}
+                  >
+                    CV {(st.cv * 100).toFixed(1)}%{noisy ? " · noisy" : ""}
+                  </span>
+                </div>
+                <DistributionStrip samples={samples} color={BACKEND_COLOR[backendId]} />
+              </div>
+            );
+          })()}
+        </>
       ) : errored ? (
         <div className="rounded-md bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
           {result?.error ?? "Benchmark failed"}
         </div>
       ) : (
-        <div className="mt-1 flex flex-col gap-1.5">
-          <div className="flex items-center justify-between text-[10.5px] text-muted-foreground">
-            <span>{PHASE_LABELS[phase]}</span>
-            {phase === "measuring" && (
-              <span className="font-mono">
-                {progress?.current ?? 0}/{progress?.total ?? 0}
-              </span>
-            )}
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-            <div
-              className={cn(
-                "h-full rounded-full bg-brand transition-[width] duration-300",
-                phase === "loading" || phase === "warmup" ? "animate-pulse" : "",
-              )}
-              style={{ width: `${running && phase === "measuring" ? pct : phase === "queued" ? 0 : 12}%` }}
-            />
-          </div>
-        </div>
+        (() => {
+          // Some backends (llama-bench) can't report sub-progress — show an
+          // indeterminate pulse rather than a stuck 0%.
+          const indeterminate = phase === "measuring" && (progress?.current ?? 0) === 0;
+          const width =
+            phase === "queued" ? 0 : phase === "measuring" && !indeterminate ? pct : indeterminate ? 35 : 12;
+          return (
+            <div className="mt-1 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-[10.5px] text-muted-foreground">
+                <span>{PHASE_LABELS[phase]}</span>
+                {phase === "measuring" && !indeterminate && (
+                  <span className="font-mono">
+                    {progress?.current ?? 0}/{progress?.total ?? 0}
+                  </span>
+                )}
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className={cn(
+                    "h-full rounded-full bg-brand transition-[width] duration-300",
+                    phase === "loading" || phase === "warmup" || indeterminate ? "animate-pulse" : "",
+                  )}
+                  style={{ width: `${width}%` }}
+                />
+              </div>
+            </div>
+          );
+        })()
       )}
     </div>
   );

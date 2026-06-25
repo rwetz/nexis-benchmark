@@ -26,7 +26,18 @@ export interface ModelInfo {
   paramsLabel?: string | null;
   /** GGUF quantization, e.g. "Q4_K_M". */
   quant?: string | null;
+  /** Architecture from the GGUF header (e.g. "llama", "phi3"). */
+  arch?: string | null;
+  /** Trained context length from the GGUF header. */
+  contextLength?: number | null;
   addedAt: string; // ISO timestamp
+}
+
+/** A saved benchmark protocol the user can re-apply. */
+export interface Preset {
+  id: string;
+  name: string;
+  config: BenchConfig;
 }
 
 export interface BackendInfo {
@@ -141,6 +152,14 @@ export interface BenchJob {
   config: BenchConfig;
   models: ModelInfo[];
   backendIds: BackendId[];
+  /** Located `llama-bench` binary for the llama.cpp backend. */
+  llamaBenchPath?: string | null;
+}
+
+export interface LlamaProbe {
+  available: boolean;
+  version?: string | null;
+  path?: string | null;
 }
 
 export const cellKey = (modelId: string, backendId: BackendId) =>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { TASK_LABELS, type TaskType } from "@/lib/types";
@@ -79,8 +80,71 @@ export function ConfigPanel() {
             />
           )}
         </div>
+
+        <PresetBar />
       </CardContent>
     </Card>
+  );
+}
+
+function PresetBar() {
+  const presets = useBenchStore((s) => s.presets);
+  const savePreset = useBenchStore((s) => s.savePreset);
+  const applyPreset = useBenchStore((s) => s.applyPreset);
+  const deletePreset = useBenchStore((s) => s.deletePreset);
+  const [name, setName] = useState<string | null>(null);
+
+  const commit = () => {
+    const n = (name ?? "").trim();
+    if (n) savePreset(n);
+    setName(null);
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5 border-t border-border/60 pt-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[10.5px] font-medium text-muted-foreground">Presets</span>
+        {name === null ? (
+          <button onClick={() => setName("")} className="text-[10.5px] text-brand hover:underline">
+            + Save current
+          </button>
+        ) : (
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit();
+              if (e.key === "Escape") setName(null);
+            }}
+            onBlur={commit}
+            placeholder="preset name…"
+            className="h-6 w-32 rounded-md border border-border bg-input/40 px-2 text-[11px] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+          />
+        )}
+      </div>
+      {presets.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {presets.map((p) => (
+            <span
+              key={p.id}
+              className="group flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px]"
+            >
+              <button onClick={() => applyPreset(p.id)} className="hover:text-foreground" title="Apply preset">
+                {p.name}
+              </button>
+              <button
+                onClick={() => deletePreset(p.id)}
+                aria-label="Delete preset"
+                className="text-muted-foreground/50 hover:text-destructive"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -47,6 +47,12 @@ pub struct ModelInfo {
     pub params_label: Option<String>,
     #[serde(default)]
     pub quant: Option<String>,
+    /// GGUF architecture (e.g. "llama", "phi3"), from the header.
+    #[serde(default)]
+    pub arch: Option<String>,
+    /// Trained context length, from the GGUF header.
+    #[serde(default)]
+    pub context_length: Option<u64>,
     pub added_at: String,
 }
 
@@ -141,4 +147,17 @@ pub struct BenchJob {
     pub config: BenchConfig,
     pub models: Vec<ModelInfo>,
     pub backend_ids: Vec<BackendId>,
+    /// User-located `llama-bench` binary (for the llama.cpp backend).
+    #[serde(default)]
+    pub llama_bench_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LlamaProbe {
+    pub available: bool,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub path: Option<String>,
 }

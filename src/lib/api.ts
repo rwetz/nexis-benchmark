@@ -2,9 +2,10 @@
 // In Tauri it uses `invoke` + window events; in a plain browser it falls back
 // to the in-process simulator so the UI is fully functional either way.
 
-import { IS_TAURI } from "./platform";
+import { IS_TAURI, IS_WINDOWS } from "./platform";
 import {
   type BackendInfo,
+  type LlamaProbe,
   type BenchJob,
   type BenchProgress,
   type BenchResult,
@@ -113,6 +114,24 @@ export async function pickModels(): Promise<ModelInfo[]> {
   return scanModels(paths);
 }
 
+/** Validate a llama-bench binary (or auto-detect on PATH when path is null). */
+export async function probeLlama(path: string | null): Promise<LlamaProbe> {
+  if (!IS_TAURI) return { available: false, version: null, path: null };
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<LlamaProbe>("probe_llama", { path });
+}
+
+/** Open a file picker to locate the llama-bench executable. */
+export async function pickLlamaBench(): Promise<string | null> {
+  if (!IS_TAURI) return null;
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const sel = await open({
+    multiple: false,
+    filters: IS_WINDOWS ? [{ name: "Executable", extensions: ["exe"] }] : undefined,
+  });
+  return typeof sel === "string" ? sel : null;
+}
+
 export async function runBenchmark(job: BenchJob): Promise<void> {
   cancelled.delete(job.jobId);
   if (!IS_TAURI) {
@@ -133,26 +152,59 @@ export async function cancelBenchmark(jobId: string): Promise<void> {
   await invoke("cancel_benchmark", { jobId });
 }
 
-export async function exportRunCsv(run: BenchRun, models: ModelInfo[]): Promise<void> {
-  const csv = runToCsv(run, models);
+async function saveText(
+  contents: string,
+  filename: string,
+  ext: string,
+  mime: string,
+): Promise<void> {
   if (!IS_TAURI) {
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob([contents], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `nexis-benchmark-${run.id}.csv`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
     return;
   }
   const { save } = await import("@tauri-apps/plugin-dialog");
   const path = await save({
-    defaultPath: `nexis-benchmark-${run.id}.csv`,
-    filters: [{ name: "CSV", extensions: ["csv"] }],
+    defaultPath: filename,
+    filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
   });
   if (!path) return;
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke("write_text_file", { path, contents: csv });
+  await invoke("write_text_file", { path, contents });
+}
+
+export function exportRunCsv(run: BenchRun, models: ModelInfo[]): Promise<void> {
+  return saveText(runToCsv(run, models), `nexis-benchmark-${run.id}.csv`, "csv", "text/csv");
+}
+
+export function exportRunJson(run: BenchRun, models: ModelInfo[]): Promise<void> {
+  const payload = {
+    tool: "nexis-benchmark",
+    exportedAt: new Date().toISOString(),
+    run,
+    models: models.filter((m) => run.matrix.some((c) => c.modelId === m.id)),
+  };
+  return saveText(
+    JSON.stringify(payload, null, 2),
+    `nexis-benchmark-${run.id}.json`,
+    "json",
+    "application/json",
+  );
+}
+
+/** Copy a Markdown results table to the clipboard. Returns success. */
+export async function copyRunMarkdown(run: BenchRun, models: ModelInfo[]): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(runToMarkdown(run, models));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -229,4 +281,27 @@ export function runToCsv(run: BenchRun, models: ModelInfo[]): string {
     ].join(",");
   });
   return [`# Nexis Benchmark — run ${run.id} — ${run.createdAt}`, head, ...rows].join("\n");
+}
+
+export function runToMarkdown(run: BenchRun, models: ModelInfo[]): string {
+  const modelName = (id: string) => models.find((m) => m.id === id)?.name ?? id;
+  const head = "| Model | Backend | tok/s | TTFT (ms) | mean (ms) | p95 (ms) | mem (MB) | acc |";
+  const sep = "| --- | --- | --: | --: | --: | --: | --: | --: |";
+  const rows = run.results.map((r) => {
+    const m = r.metrics;
+    const cells = [
+      modelName(r.modelId),
+      r.backendId,
+      m ? m.tokensPerSec.toFixed(1) : "—",
+      m ? m.firstTokenMs.toFixed(2) : "—",
+      m ? m.latencyMeanMs.toFixed(2) : "—",
+      m ? m.latencyP95Ms.toFixed(2) : "—",
+      m ? (m.peakMemBytes / 1e6).toFixed(0) : "—",
+      m?.accuracy != null ? `${(m.accuracy * 100).toFixed(1)}%` : "—",
+    ];
+    return `| ${cells.join(" | ")} |`;
+  });
+  return [`**Nexis Benchmark** — ${new Date(run.createdAt).toLocaleString()}`, "", head, sep, ...rows].join(
+    "\n",
+  );
 }
