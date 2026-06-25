@@ -72,6 +72,13 @@ export function ComparisonChart({ metric, models, backendIds, results }: Props) 
                       {BACKEND_SHORT[b]}
                     </span>
                     <div className="relative h-5 flex-1 overflow-hidden rounded-md bg-muted/40">
+                      {[25, 50, 75].map((g) => (
+                        <span
+                          key={g}
+                          className="absolute inset-y-0 w-px bg-border/50"
+                          style={{ left: `${g}%` }}
+                        />
+                      ))}
                       <div
                         className="absolute inset-y-0 left-0 rounded-md transition-[width] duration-500 ease-out"
                         style={{
