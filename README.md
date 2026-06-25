@@ -17,8 +17,8 @@ more real engines slot in without touching the harness, IPC, or UI.
 | -------------- | ----------------------------------------------------------------------- |
 | `ONNX Runtime` | ✅ **real inference** via the `ort` crate (prebuilt binaries, no cmake)  |
 | `nexis-ml-rs`  | ✅ **real** wgpu/ndarray training throughput (spawns `nexis-ml`, NDJSON) |
+| `llama.cpp`    | ✅ **real GGUF inference** via prebuilt `llama-bench` (no cmake — locate it) |
 | `Simulated`    | ✅ synthetic metrics, real event streaming (UI / protocol testing)       |
-| `llama.cpp`    | ⏸ deferred — needs a cmake build of llama.cpp for GGUF                   |
 
 > The UI labels every result's provenance: a green **`real`** badge vs **`sim`**, plus a
 > per-run note. `ONNX Runtime` runs real forward passes on the dropped `.onnx` model with

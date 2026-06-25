@@ -22,8 +22,16 @@ fn run(app: &AppHandle, job: &BenchJob, cancel: &AtomicBool) {
             if cancel.load(Ordering::Relaxed) {
                 break 'outer;
             }
-            let Some(engine) = engine_for(backend_id) else {
-                continue;
+            // The llama.cpp backend uses the user-located binary from the job;
+            // everything else builds from the static registry.
+            let engine: Box<dyn crate::backend::Engine> = match backend_id {
+                BackendId::Llama => {
+                    Box::new(crate::backend::LlamaCpp::resolve(job.llama_bench_path.as_deref()))
+                }
+                other => match engine_for(other) {
+                    Some(e) => e,
+                    None => continue,
+                },
             };
             let info = engine.info();
             // Defensive: the UI already filters, but never run an unsupported cell.

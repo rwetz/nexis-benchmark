@@ -2,6 +2,8 @@ mod backend;
 mod bench;
 mod commands;
 mod domain;
+mod gguf;
+mod llama;
 mod nexis;
 mod onnx;
 mod scan;
@@ -22,6 +24,7 @@ pub fn run() {
             commands::run_benchmark,
             commands::cancel_benchmark,
             commands::write_text_file,
+            commands::probe_llama,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

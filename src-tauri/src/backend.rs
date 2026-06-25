@@ -158,7 +158,22 @@ impl Engine for OnnxRuntime {
 
 // ── llama.cpp (GGUF) ─────────────────────────────────────────────────────────
 
-pub struct LlamaCpp;
+pub struct LlamaCpp {
+    binary: Option<PathBuf>,
+}
+impl LlamaCpp {
+    pub fn detect() -> Self {
+        Self {
+            binary: crate::llama::find_on_path(),
+        }
+    }
+    /// Resolve a user-located path, falling back to PATH.
+    pub fn resolve(path: Option<&str>) -> Self {
+        Self {
+            binary: crate::llama::resolve(path),
+        }
+    }
+}
 impl Engine for LlamaCpp {
     fn id(&self) -> BackendId {
         BackendId::Llama
@@ -167,10 +182,10 @@ impl Engine for LlamaCpp {
         BackendInfo {
             id: BackendId::Llama,
             label: "llama.cpp".into(),
-            description: "GGUF inference via llama.cpp (requires a cmake build).".into(),
-            // Honest: not wired and cmake isn't present on this machine.
-            available: false,
-            device: DeviceKind::Cpu,
+            description: "GGUF inference via llama-bench (no cmake — locate the prebuilt binary)."
+                .into(),
+            available: self.binary.is_some(),
+            device: DeviceKind::Auto,
             version: None,
             supports: vec![ModelFormat::Gguf],
         }
@@ -183,7 +198,17 @@ impl Engine for LlamaCpp {
         emit: &dyn Fn(BenchProgress),
         cancel: &AtomicBool,
     ) -> Result<BenchMetrics, String> {
-        run_simulated(job_id, model, BackendId::Llama, config, emit, cancel)
+        let bin = self
+            .binary
+            .as_ref()
+            .ok_or("llama-bench not found — locate it in the Backends panel")?;
+        crate::llama::run(bin, job_id, model, config, emit, cancel)
+    }
+    fn simulated(&self) -> bool {
+        false
+    }
+    fn note(&self) -> Option<String> {
+        Some(crate::llama::LLAMA_NOTE.to_string())
     }
 }
 
@@ -193,7 +218,7 @@ pub fn registry() -> Vec<Box<dyn Engine>> {
     vec![
         Box::new(NexisMl::detect()),
         Box::new(OnnxRuntime),
-        Box::new(LlamaCpp),
+        Box::new(LlamaCpp::detect()),
         Box::new(Simulated),
     ]
 }

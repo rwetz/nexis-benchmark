@@ -36,3 +36,8 @@ pub fn cancel_benchmark(state: State<AppState>, job_id: String) {
 pub fn write_text_file(path: String, contents: String) -> Result<(), String> {
     std::fs::write(&path, contents).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn probe_llama(path: Option<String>) -> LlamaProbe {
+    crate::llama::probe(path.as_deref())
+}
