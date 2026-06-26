@@ -35,7 +35,9 @@ fn kill_tree(pid: u32) {
     }
     #[cfg(not(windows))]
     {
-        let _ = Command::new("kill").args(["-TERM", &pid.to_string()]).status();
+        let _ = Command::new("kill")
+            .args(["-TERM", &pid.to_string()])
+            .status();
     }
 }
 
@@ -96,10 +98,15 @@ fn parse_json(out: &str, peak_mem_bytes: f64) -> Result<BenchMetrics, String> {
 
     let u = |o: &Value, k: &str| o.get(k).and_then(|v| v.as_u64()).unwrap_or(0);
     let gen = arr.iter().find(|o| u(o, "n_gen") > 0);
-    let prompt = arr.iter().find(|o| u(o, "n_prompt") > 0 && u(o, "n_gen") == 0);
+    let prompt = arr
+        .iter()
+        .find(|o| u(o, "n_prompt") > 0 && u(o, "n_gen") == 0);
     let primary = gen.or_else(|| arr.first()).unwrap();
 
-    let tokens_per_sec = primary.get("avg_ts").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let tokens_per_sec = primary
+        .get("avg_ts")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0);
     if tokens_per_sec <= 0.0 {
         return Err("llama-bench output missing throughput (avg_ts)".into());
     }
@@ -107,7 +114,12 @@ fn parse_json(out: &str, peak_mem_bytes: f64) -> Result<BenchMetrics, String> {
     let mut samples_ms: Vec<f64> = primary
         .get("samples_ns")
         .and_then(|v| v.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_f64()).map(|ns| ns / 1.0e6).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_f64())
+                .map(|ns| ns / 1.0e6)
+                .collect()
+        })
         .unwrap_or_default();
     if samples_ms.is_empty() {
         // Fall back to the average if per-sample timings aren't present.
@@ -236,7 +248,11 @@ pub fn run(
                 }
                 let peak_mem = *peak.lock().unwrap() as f64;
                 let metrics = parse_json(&out, peak_mem)?;
-                emit(mk(RunPhase::Done, config.runs.max(1), Some(metrics.tokens_per_sec)));
+                emit(mk(
+                    RunPhase::Done,
+                    config.runs.max(1),
+                    Some(metrics.tokens_per_sec),
+                ));
                 return Ok(metrics);
             }
             Ok(None) => std::thread::sleep(Duration::from_millis(120)),

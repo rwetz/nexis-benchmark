@@ -89,7 +89,8 @@ impl Engine for NexisMl {
         BackendInfo {
             id: BackendId::Nexis,
             label: "nexis-ml-rs".into(),
-            description: "Python-free burn engine (wgpu / ndarray). Real training throughput.".into(),
+            description: "Python-free burn engine (wgpu / ndarray). Real training throughput."
+                .into(),
             available: self.binary.is_some(),
             device: self.device,
             version: self.version.clone(),
@@ -106,10 +107,7 @@ impl Engine for NexisMl {
         emit: &dyn Fn(BenchProgress),
         cancel: &AtomicBool,
     ) -> Result<BenchMetrics, String> {
-        let bin = self
-            .binary
-            .as_ref()
-            .ok_or("nexis-ml binary not found")?;
+        let bin = self.binary.as_ref().ok_or("nexis-ml binary not found")?;
         nexis::run(bin, job_id, model, config, emit, cancel)
     }
     fn simulated(&self) -> bool {

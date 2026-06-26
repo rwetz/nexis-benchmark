@@ -56,10 +56,10 @@ fn read_string(r: &mut R) -> io::Result<String> {
 /// Byte size of a fixed-width scalar value type, or None for string/array.
 fn scalar_size(vt: u32) -> Option<u64> {
     match vt {
-        0 | 1 | 7 => Some(1),       // u8 / i8 / bool
-        2 | 3 => Some(2),           // u16 / i16
-        4 | 5 | 6 => Some(4),       // u32 / i32 / f32
-        10 | 11 | 12 => Some(8),    // u64 / i64 / f64
+        0 | 1 | 7 => Some(1), // u8 / i8 / bool
+        2 | 3 => Some(2),     // u16 / i16
+        4..=6 => Some(4),     // u32 / i32 / f32
+        10..=12 => Some(8),   // u64 / i64 / f64
         _ => None,
     }
 }
@@ -94,7 +94,10 @@ fn skip_value(r: &mut R, vt: u32) -> io::Result<()> {
     } else if vt == 9 {
         skip_array(r)?;
     } else {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "unknown gguf value type"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "unknown gguf value type",
+        ));
     }
     Ok(())
 }
@@ -114,7 +117,10 @@ fn skip_array(r: &mut R) -> io::Result<()> {
             skip_array(r)?;
         }
     } else {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "unknown gguf array elem"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "unknown gguf array elem",
+        ));
     }
     Ok(())
 }
@@ -142,7 +148,10 @@ pub fn read_metadata(path: &Path) -> Option<GgufMeta> {
 
         let wanted = matches!(
             key.as_str(),
-            "general.architecture" | "general.name" | "general.parameter_count" | "general.file_type"
+            "general.architecture"
+                | "general.name"
+                | "general.parameter_count"
+                | "general.file_type"
         ) || key.ends_with(".context_length");
 
         if !wanted {
@@ -253,7 +262,7 @@ mod tests {
         buf.extend_from_slice(&3u32.to_le_bytes()); // version
         buf.extend_from_slice(&0u64.to_le_bytes()); // tensor_count
         buf.extend_from_slice(&4u64.to_le_bytes()); // kv_count
-        // An array KV before our wanted keys, to exercise skipping.
+                                                    // An array KV before our wanted keys, to exercise skipping.
         put_str(&mut buf, "tokenizer.ggml.tokens");
         buf.extend_from_slice(&9u32.to_le_bytes()); // ARRAY
         buf.extend_from_slice(&8u32.to_le_bytes()); // elem STRING

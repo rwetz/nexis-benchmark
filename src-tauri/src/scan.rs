@@ -121,7 +121,9 @@ fn find_params(name: &str) -> Option<String> {
         }
         let last = t.chars().last().unwrap();
         if (last == 'B' || last == 'b' || last == 'M' || last == 'm')
-            && t[..t.len() - 1].chars().all(|c| c.is_ascii_digit() || c == '.')
+            && t[..t.len() - 1]
+                .chars()
+                .all(|c| c.is_ascii_digit() || c == '.')
             && t[..t.len() - 1].chars().any(|c| c.is_ascii_digit())
         {
             return Some(t.to_uppercase());

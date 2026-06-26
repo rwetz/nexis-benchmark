@@ -6,7 +6,7 @@
 use crate::domain::*;
 use ort::session::builder::GraphOptimizationLevel;
 use ort::session::{Session, SessionInputValue};
-use ort::value::{TensorElementType, Tensor, ValueType};
+use ort::value::{Tensor, TensorElementType, ValueType};
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
@@ -23,7 +23,11 @@ struct InSpec {
 }
 
 fn numel(shape: &[i64]) -> usize {
-    shape.iter().map(|&d| d.max(0) as usize).product::<usize>().max(1)
+    shape
+        .iter()
+        .map(|&d| d.max(0) as usize)
+        .product::<usize>()
+        .max(1)
 }
 
 /// Resolve a model's input signature into concrete specs, substituting dynamic
@@ -34,7 +38,10 @@ fn build_specs(session: &Session, config: &BenchConfig) -> Result<Vec<InSpec>, S
     let mut specs = Vec::new();
     for input in session.inputs() {
         let ValueType::Tensor { ty, shape, .. } = input.dtype() else {
-            return Err(format!("input '{}' is not a tensor (unsupported)", input.name()));
+            return Err(format!(
+                "input '{}' is not a tensor (unsupported)",
+                input.name()
+            ));
         };
         let mut dyn_seen = 0;
         let resolved: Vec<i64> = shape
@@ -50,7 +57,10 @@ fn build_specs(session: &Session, config: &BenchConfig) -> Result<Vec<InSpec>, S
             })
             .collect();
         if numel(&resolved) > 16_000_000 {
-            return Err(format!("input '{}' resolves too large to benchmark", input.name()));
+            return Err(format!(
+                "input '{}' resolves too large to benchmark",
+                input.name()
+            ));
         }
         specs.push(InSpec {
             name: input.name().to_string(),
@@ -76,7 +86,9 @@ fn int_fill(name: &str) -> i64 {
 }
 
 /// Build a fresh inputs vector (each `run` consumes its inputs).
-fn make_inputs(specs: &[InSpec]) -> Result<Vec<(Cow<'static, str>, SessionInputValue<'static>)>, String> {
+fn make_inputs(
+    specs: &[InSpec],
+) -> Result<Vec<(Cow<'static, str>, SessionInputValue<'static>)>, String> {
     let mut out = Vec::with_capacity(specs.len());
     for s in specs {
         let n = numel(&s.shape);
@@ -85,30 +97,47 @@ fn make_inputs(specs: &[InSpec]) -> Result<Vec<(Cow<'static, str>, SessionInputV
         let value: SessionInputValue<'static> = match s.ty {
             TensorElementType::Int64 => {
                 let data = vec![int_fill(&s.name); n];
-                SessionInputValue::from(Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?)
+                SessionInputValue::from(
+                    Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?,
+                )
             }
             TensorElementType::Int32 => {
                 let data = vec![int_fill(&s.name) as i32; n];
-                SessionInputValue::from(Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?)
+                SessionInputValue::from(
+                    Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?,
+                )
             }
             TensorElementType::Float32 => {
                 let data = vec![0.0f32; n];
-                SessionInputValue::from(Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?)
+                SessionInputValue::from(
+                    Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?,
+                )
             }
             TensorElementType::Float64 => {
                 let data = vec![0.0f64; n];
-                SessionInputValue::from(Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?)
+                SessionInputValue::from(
+                    Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?,
+                )
             }
             TensorElementType::Bool => {
                 let v = s.name.to_lowercase().contains("mask");
                 let data = vec![v; n];
-                SessionInputValue::from(Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?)
+                SessionInputValue::from(
+                    Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?,
+                )
             }
             TensorElementType::Uint8 => {
                 let data = vec![0u8; n];
-                SessionInputValue::from(Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?)
+                SessionInputValue::from(
+                    Tensor::from_array((shape, data)).map_err(|e| em(e.to_string()))?,
+                )
             }
-            other => return Err(format!("input '{}' has unsupported dtype {other:?}", s.name)),
+            other => {
+                return Err(format!(
+                    "input '{}' has unsupported dtype {other:?}",
+                    s.name
+                ))
+            }
         };
         out.push((Cow::Owned(s.name.clone()), value));
     }
@@ -128,7 +157,12 @@ fn tokens_per_pass(specs: &[InSpec]) -> f64 {
     if let Some(s) = specs.iter().find(|s| s.shape.len() >= 2) {
         (s.shape[0].max(1) * s.shape[1].max(1)) as f64
     } else {
-        specs.first().and_then(|s| s.shape.first()).map(|d| d.max(&1)).copied().unwrap_or(1) as f64
+        specs
+            .first()
+            .and_then(|s| s.shape.first())
+            .map(|d| d.max(&1))
+            .copied()
+            .unwrap_or(1) as f64
     }
 }
 
@@ -186,7 +220,9 @@ pub fn run(
         check()?;
         emit(mk(RunPhase::Warmup, 0, None));
         let inputs = make_inputs(&specs)?;
-        session.run(inputs).map_err(|e| format!("warm-up inference: {e}"))?;
+        session
+            .run(inputs)
+            .map_err(|e| format!("warm-up inference: {e}"))?;
     }
 
     // Measured.
@@ -262,7 +298,12 @@ mod tests {
         let m = run("job", &model, &config, &|_p| {}, &cancel).expect("onnx run failed");
         eprintln!(
             "onnx_smoke: tok/s={:.1} first={:.3}ms mean={:.3}ms p95={:.3}ms mem={}B samples={:?}",
-            m.tokens_per_sec, m.first_token_ms, m.latency_mean_ms, m.latency_p95_ms, m.peak_mem_bytes, m.samples_ms
+            m.tokens_per_sec,
+            m.first_token_ms,
+            m.latency_mean_ms,
+            m.latency_p95_ms,
+            m.peak_mem_bytes,
+            m.samples_ms
         );
         assert_eq!(m.samples_ms.len(), 5);
         assert!(m.latency_mean_ms > 0.0);

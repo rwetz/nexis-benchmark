@@ -42,7 +42,11 @@ fn percentile(sorted: &[f64], p: f64) -> f64 {
     sorted[idx]
 }
 
-pub fn simulate_metrics(model: &ModelInfo, backend: BackendId, config: &BenchConfig) -> BenchMetrics {
+pub fn simulate_metrics(
+    model: &ModelInfo,
+    backend: BackendId,
+    config: &BenchConfig,
+) -> BenchMetrics {
     let key = format!("{}{:?}{:?}", model.id, backend, config.task);
     let mut rng = Lcg(fnv1a(&key));
 
@@ -69,9 +73,14 @@ pub fn simulate_metrics(model: &ModelInfo, backend: BackendId, config: &BenchCon
 
     let peak_mem_bytes = model.size_bytes as f64 * (1.15 + rng.next_f() * 0.5) + 180e6;
     let accuracy = match config.task {
-        TaskType::Classification => {
-            Some(0.78 + rng.next_f() * 0.19 + if backend == BackendId::Nexis { 0.01 } else { 0.0 })
-        }
+        TaskType::Classification => Some(
+            0.78 + rng.next_f() * 0.19
+                + if backend == BackendId::Nexis {
+                    0.01
+                } else {
+                    0.0
+                },
+        ),
         _ => None,
     };
 
