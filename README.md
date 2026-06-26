@@ -4,6 +4,13 @@
 
 <h1 align="center">Nexis Benchmark</h1>
 
+<p align="center">
+  <a href="https://github.com/rwetz/nexis-benchmark/actions/workflows/ci.yml"><img src="https://github.com/rwetz/nexis-benchmark/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0" />
+  <img src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white" alt="Tauri 2" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19" />
+</p>
+
 A desktop app for benchmarking local AI models. Drop in **ONNX** or **GGUF** models,
 pick a task, run a standardized benchmark, and compare **throughput, latency, memory,
 and accuracy** side by side across inference backends.
@@ -13,7 +20,7 @@ benchmark harness and backend abstraction; React owns model management and the c
 
 ## Status
 
-Working end-to-end pipeline. Two backends produce **real** measurements; the rest are
+Working end-to-end pipeline. Three backends produce **real** measurements; the rest are
 deterministic simulations behind the same `Engine` trait (`src-tauri/src/backend.rs`), so
 more real engines slot in without touching the harness, IPC, or UI.
 
@@ -43,6 +50,14 @@ in-process simulator and seeds demo models:
 ```sh
 pnpm dev   # http://localhost:1420
 ```
+
+## Keyboard shortcuts
+
+| Key | Action |
+| --- | --- |
+| `⌘` / `Ctrl` + `Enter` | Run benchmark |
+| `Esc` | Stop a running benchmark |
+| `t` | Toggle light / dark theme |
 
 ## Architecture
 
