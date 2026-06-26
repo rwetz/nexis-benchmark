@@ -1,4 +1,8 @@
-# Nexis Benchmark
+<p align="center">
+  <img src="public/heptagram.svg" alt="Nexis Benchmark" width="110" />
+</p>
+
+<h1 align="center">Nexis Benchmark</h1>
 
 A desktop app for benchmarking local AI models. Drop in **ONNX** or **GGUF** models,
 pick a task, run a standardized benchmark, and compare **throughput, latency, memory,
