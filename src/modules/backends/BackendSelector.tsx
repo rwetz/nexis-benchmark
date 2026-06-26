@@ -63,7 +63,7 @@ function BackendRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors",
+        "group flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors",
         !disabled && selected
           ? "border-border bg-muted/60"
           : "border-transparent bg-muted/30 hover:bg-muted",
@@ -96,7 +96,7 @@ function BackendRow({
               {backend.device}
             </span>
           </div>
-          <div className="mt-0.5 truncate text-[10.5px] text-muted-foreground">
+          <div className="mt-0.5 text-[10.5px] text-muted-foreground line-clamp-1 group-hover:line-clamp-none">
             {backend.description}
           </div>
         </div>
